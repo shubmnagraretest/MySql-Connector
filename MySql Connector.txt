@@ -1,0 +1,114 @@
+
+public class MysqlConnector extends GenericConnector {
+  private static final Logger logger = LoggerFactory.getLogger(MysqlConnector.class);
+
+  public MysqlConnector(DriverManagerDataSource database) throws SQLException {
+    super(database);
+  }
+
+  @Override
+  protected void initColTypeMap() {
+    this.colTypeMap.put("char", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("varchar", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("tinytext", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("text", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("mediumtext", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("longtext", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("binary", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("varbinary", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("boolean", GenericConnector.DATATYPE_STRING);
+    this.colTypeMap.put("bool", GenericConnector.DATATYPE_STRING);
+
+    this.colTypeMap.put("date", GenericConnector.DATATYPE_DATE);
+    this.colTypeMap.put("datetime", GenericConnector.DATATYPE_DATE);
+    this.colTypeMap.put("timestamp", GenericConnector.DATATYPE_DATE);
+    this.colTypeMap.put("time", GenericConnector.DATATYPE_DATE);
+    this.colTypeMap.put("year", GenericConnector.DATATYPE_DATE);
+
+    this.colTypeMap.put("bit", GenericConnector.DATATYPE_BOOLEAN);
+
+    this.colTypeMap.put("tinyint", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("smallint", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("mediumint", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("int", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("integer", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("bigint", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("decimal", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("dec", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("numeric", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("fixed", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("float", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("double", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("double_precision", GenericConnector.DATATYPE_INTEGER);
+    this.colTypeMap.put("real", GenericConnector.DATATYPE_INTEGER);
+
+  }
+
+  @Override
+  public ArrayNode getAllSchemas() {
+    logger.trace("Entering getAllSchemas...");
+    ArrayNode retVal = new ObjectMapper().createArrayNode();
+    try {
+      ResultSet rs = this.getConnection().getMetaData().getCatalogs();
+      while (rs.next()) {
+        retVal.add(rs.getString("TABLE_CAT"));
+      }
+      rs.close();
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    logger.trace("Exiting getAllSchemas\n...");
+    return retVal;
+  }
+
+  @Override
+  public ArrayNode getAllTables(String schemaName) {
+
+    logger.trace("Entering getAllTables...");
+    ArrayNode retVal = new ObjectMapper().createArrayNode();
+
+    String query =
+        "SELECT TABLE_NAME from information_schema.tables where TABLE_SCHEMA='" + schemaName + "'";
+    logger.debug(query);
+    try {
+      ResultSet resultSet = this.getConnection().createStatement().executeQuery(query);
+      while (resultSet.next()) {
+        retVal.add(resultSet.getString("TABLE_NAME"));
+      }
+      resultSet.close();
+
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+
+    logger.trace("Exiting getAllTables\n...");
+    return retVal;
+  }
+
+  @Override
+  public ArrayNode getAllColumns(String schemaName, String tableName) {
+    logger.trace("Entering getAllColumns...");
+    ArrayNode retVal = new ObjectMapper().createArrayNode();
+    String query =
+        "SELECT COLUMN_NAME, DATA_TYPE from information_schema.columns where TABLE_SCHEMA='"
+            + schemaName + "' AND TABLE_NAME='" + tableName + "'";
+    logger.debug(query);
+    JsonNode currRecord = new ObjectMapper().createObjectNode();
+    try {
+      ResultSet resultSet = this.getConnection().createStatement().executeQuery(query);
+      while (resultSet.next()) {
+        currRecord = new ObjectMapper().createObjectNode();
+        ((ObjectNode) currRecord).put("columnName", resultSet.getString("COLUMN_NAME"));
+        ((ObjectNode) currRecord).put("dataType",
+            this.getAppropriateDataType(resultSet.getString("DATA_TYPE")));
+        retVal.add(currRecord);
+      }
+      resultSet.close();
+    } catch (SQLException e) {
+      e.printStackTrace();
+    }
+    logger.trace("Exiting getAllColumns\n...");
+    return retVal;
+  }
+
+}
